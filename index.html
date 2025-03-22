@@ -10,6 +10,7 @@
       margin: 0;
       padding: 0;
       height: 100%;
+      font-family: Arial, sans-serif;
     }
 
     #loading, #offline, #main-content {
@@ -37,7 +38,7 @@
 </head>
 
 <body>
-  <div id="loading">Checking Server Status...</div>
+  <div id="loading">Connecting to server...</div>
 
   <div id="offline">SERVER OFFLINE</div>
 
@@ -50,7 +51,7 @@
   </div>
 
   <script>
-    const serverURL = 'https://9a5c-122-150-208-39.ngrok-free.app'; // Change if needed
+    const serverURL = 'https://da2e-122-150-208-39.ngrok-free.app'; // Your server endpoint
 
     function copyIP() {
       const ip = document.getElementById('server-ip').textContent;
@@ -82,25 +83,34 @@
       document.getElementById('loading').style.display = 'flex';
 
       let isOnline = false;
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 3000); // 3-second timeout
 
-      try {
-        const response = await fetch(serverURL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: 'TEST' }),
-          signal: controller.signal
-        });
-        if (response.ok) {
-          isOnline = true;
+      // Create a Promise that races between fetch and timeout
+      const statusCheck = new Promise(async (resolve) => {
+        try {
+          const response = await fetch(serverURL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: 'TEST' }),
+          });
+
+          // Check if the server responded with 200
+          if (response.status === 200) {
+            isOnline = true;
+          }
+        } catch (err) {
+          console.warn('Fetch error:', err);
+        } finally {
+          resolve();
         }
-      } catch (err) {
-        console.warn('No response from server:', err);
-      } finally {
-        clearTimeout(timeout);
-      }
+      });
 
+      // 3-second timeout
+      const timeout = new Promise(resolve => setTimeout(resolve, 3000));
+
+      // Wait for whichever finishes first (fetch or timeout)
+      await Promise.race([statusCheck, timeout]);
+
+      // Update the screen based on result
       document.getElementById('loading').style.display = 'none';
 
       if (isOnline) {
