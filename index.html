@@ -40,7 +40,10 @@
 <body>
   <div id="loading">Connecting to server...</div>
 
-  <div id="offline">SERVER OFFLINE</div>
+  <div id="offline">
+    SERVER OFFLINE <br><br>
+    <button onclick="checkServerStatus()">Retry</button>
+  </div>
 
   <div id="main-content">
     <h1>The IP is: <span id="server-ip">physical-wide.gl.joinmc.link</span></h1>
@@ -51,7 +54,7 @@
   </div>
 
   <script>
-    const serverURL = 'https://3a29-122-150-208-39.ngrok-free.app'; // Your server endpoint
+    const serverURL = 'https://13f6-122-150-208-75.ngrok-free.app'; // Update to your ngrok link
 
     function copyIP() {
       const ip = document.getElementById('server-ip').textContent;
@@ -61,79 +64,77 @@
     }
 
     async function confirmAndRestart() {
-        const confirmRestart = confirm('Are you sure you want to restart the server? ONLY use this when you can\'t join.');
-        if (!confirmRestart) return;
-      
-        try {
-          const response = await fetch(serverURL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: 'RESET' }),
-          });
-          const data = await response.text();
-          console.log(data);
-          alert('Server restart request sent.');
-        } catch (error) {
-          console.error('Error:', error);
-          alert('Failed to send the restart request.');
-        }
+      const confirmRestart = confirm('Are you sure you want to restart the server? ONLY use this when you can\'t join.');
+      if (!confirmRestart) return;
+
+      try {
+        const response = await fetch(serverURL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: 'RESET' }),
+        });
+        const data = await response.text();
+        console.log(data);
+        alert('Server restart request sent.');
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to send the restart request.');
       }
-    
-      async function checkServerStatus() {
-    document.getElementById('loading').style.display = 'flex';
-      
-    let isOnline = false;
-    let fetchCompleted = false;
-      
-    // Create a timeout that sets offline if fetch doesn't finish in 3s
-    const timeoutId = setTimeout(() => {
-      if (!fetchCompleted) {
-        console.log('Server check timed out.');
+    }
+
+    function showOnline() {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('offline').style.display = 'none';
+      document.getElementById('main-content').style.display = 'block';
+    }
+
+    function showOffline() {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('main-content').style.display = 'none';
+      document.getElementById('offline').style.display = 'flex';
+    }
+
+    async function checkServerStatus() {
+      document.getElementById('loading').style.display = 'flex';
+      document.getElementById('offline').style.display = 'none';
+      document.getElementById('main-content').style.display = 'none';
+
+      let responded = false;
+
+      const timeout = setTimeout(() => {
+        if (!responded) {
+          console.log("Server check timed out.");
+          showOffline();
+        }
+      }, 3000);
+
+      try {
+        const response = await fetch(serverURL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: 'TEST' }),
+        });
+
+        const text = await response.text();
+        console.log('Response status:', response.status);
+        console.log('Response text:', text);
+
+        if (response.status === 200) {
+          responded = true;
+          clearTimeout(timeout);
+          showOnline();
+        } else {
+          responded = true;
+          clearTimeout(timeout);
+          showOffline();
+        }
+      } catch (err) {
+        console.error('Fetch error:', err);
+        responded = true;
+        clearTimeout(timeout);
         showOffline();
       }
-    }, 3000);
-  
-    try {
-      const response = await fetch(serverURL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: 'TEST' }),
-      });
-    
-      fetchCompleted = true;  // Mark fetch as finished
-    
-      clearTimeout(timeoutId); // Stop the timeout
-    
-      console.log('Response status:', response.status);
-      const text = await response.text();
-      console.log('Response text:', text);
-    
-      if (response.status === 200) {
-        isOnline = true;
-      }
-    } catch (err) {
-      console.warn('Fetch error:', err);
     }
-  
-    // Decide what to show based on the fetch result
-    if (isOnline) {
-      showOnline();
-    } else if (fetchCompleted === false) {
-      // If fetch never finished, wait for timeout to handle offline
-    } else {
-      showOffline();
-    }
-  }
-  
-  function showOnline() {
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('main-content').style.display = 'block';
-  }
-  
-  function showOffline() {
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('offline').style.display = 'flex';
-  }
 
     window.onload = checkServerStatus;
   </script>
