@@ -1,43 +1,74 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Minecraft Server</title>
-</head>
-<body>
-  <h1>The IP is: <span id="server-ip">physical-wide.gl.joinmc.link</span></h1>
-  
-  <button onclick="copyIP()">Copy IP</button>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+    }
 
-  <h1>Press button to restart</h1>
-  <button onclick="confirmAndRestart()">RESTART</button>
+    #loading, #offline, #main-content {
+      display: none;
+      height: 100%;
+      width: 100%;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+
+    #loading {
+      display: flex;
+      background-color: #f0f0f0;
+      font-size: 2em;
+    }
+
+    #offline {
+      background-color: red;
+      color: white;
+      font-size: 3em;
+      display: flex;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="loading">Checking Server Status...</div>
+
+  <div id="offline">SERVER OFFLINE</div>
+
+  <div id="main-content">
+    <h1>The IP is: <span id="server-ip">physical-wide.gl.joinmc.link</span></h1>
+    <button onclick="copyIP()">Copy IP</button>
+
+    <h1>Press button to restart</h1>
+    <button onclick="confirmAndRestart()">RESTART</button>
+  </div>
 
   <script>
+    const serverURL = 'https://9a5c-122-150-208-39.ngrok-free.app'; // Change if needed
+
     function copyIP() {
       const ip = document.getElementById('server-ip').textContent;
       navigator.clipboard.writeText(ip)
-        .then(() => {
-          alert('IP copied to clipboard!');
-        })
-        .catch(err => {
-          console.error('Failed to copy: ', err);
-        });
+        .then(() => alert('IP copied to clipboard!'))
+        .catch(err => console.error('Failed to copy: ', err));
     }
 
     async function confirmAndRestart() {
-      const confirmRestart = confirm('Are you sure you want to restart the server(Don\'t press it just to test it. ONLY use when you cant join because everyone will be kicked off?');
+      const confirmRestart = confirm('Are you sure you want to restart the server? ONLY use this when you can\'t join.');
       if (!confirmRestart) return;
 
       try {
-        const response = await fetch('https://f831-122-150-208-75.ngrok-free.app', {
+        const response = await fetch(serverURL, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message: 'RESET' }),
         });
-
         const data = await response.text();
         console.log(data);
         alert('Server restart request sent.');
@@ -46,6 +77,41 @@
         alert('Failed to send the restart request.');
       }
     }
+
+    async function checkServerStatus() {
+      document.getElementById('loading').style.display = 'flex';
+
+      let isOnline = false;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000); // 3-second timeout
+
+      try {
+        const response = await fetch(serverURL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: 'TEST' }),
+          signal: controller.signal
+        });
+        if (response.ok) {
+          isOnline = true;
+        }
+      } catch (err) {
+        console.warn('No response from server:', err);
+      } finally {
+        clearTimeout(timeout);
+      }
+
+      document.getElementById('loading').style.display = 'none';
+
+      if (isOnline) {
+        document.getElementById('main-content').style.display = 'block';
+      } else {
+        document.getElementById('offline').style.display = 'flex';
+      }
+    }
+
+    window.onload = checkServerStatus;
   </script>
 </body>
+
 </html>
